@@ -291,3 +291,38 @@ def grid_heatmap(table: pd.DataFrame, title: str):
     sns.heatmap(table, annot=True, fmt=".3f", cmap="Blues", ax=ax, cbar=False)
     ax.set(title=title)
     return fig
+
+
+# Metrics overview ------------------------------------------------------
+def confusion_grid(cms: dict, threshold: float):
+    """One small confusion matrix per model, same colour scale, so the error types can be compared at a glance."""
+    n = len(cms)
+    cols = 4
+    rows = int(np.ceil(n / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(3.1 * cols, 2.8 * rows))
+    vmax = max(cm.max() for cm in cms.values())
+    for ax, (name, cm) in zip(axes.flat, cms.items()):
+        labels = np.array([[f"TN\n{cm[0, 0]}", f"FP\n{cm[0, 1]}"], [f"FN\n{cm[1, 0]}", f"TP\n{cm[1, 1]}"]])
+        sns.heatmap(cm, annot=labels, fmt="", cmap="Blues", cbar=False, ax=ax, vmin=0, vmax=vmax,
+                    xticklabels=["pred 0", "pred 1"], yticklabels=["actual 0", "actual 1"])
+        ax.set_title(name, fontsize=10)
+    for ax in list(axes.flat)[n:]:
+        ax.axis("off")
+    fig.suptitle(f"Out-of-fold confusion matrices, all 768 patients, threshold {threshold:.2f}", y=1.0)
+    fig.tight_layout()
+    return fig
+
+
+def metric_vs_baseline(model: pd.Series, baseline: pd.Series, model_name: str):
+    """Grouped bars: each metric for one model next to the always-'no' baseline."""
+    fig, ax = plt.subplots(figsize=(7.5, 3.6))
+    x = np.arange(len(model))
+    b1 = ax.bar(x - 0.2, model.values, 0.4, label=model_name, color=BLUE)
+    b2 = ax.bar(x + 0.2, baseline.values, 0.4, label="baseline: always 'not diabetic'", color=GREY)
+    for bars in (b1, b2):
+        ax.bar_label(bars, fmt="%.2f", fontsize=8, padding=2)
+    ax.set_xticks(x, model.index)
+    ax.set(ylim=(0, 1.1), ylabel="score", title="The same predictions, five different numbers")
+    ax.legend(loc="upper left", fontsize=8)
+    _clean(ax)
+    return fig

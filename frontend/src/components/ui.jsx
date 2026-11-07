@@ -28,7 +28,7 @@ export function DataTable({ table, maxRows = 30 }) {
             {rows.map((row, i) => (
               <tr key={i}>
                 {row.map((v, j) => (
-                  <td key={j} className={typeof v === "number" ? "num" : ""}>
+                  <td key={j} className={typeof v === "number" ? "num" : String(v).length > 40 ? "text" : ""}>
                     {v === null ? <span className="muted">NaN</span> : String(v)}
                   </td>
                 ))}

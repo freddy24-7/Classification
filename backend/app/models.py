@@ -101,6 +101,7 @@ def cv_scores(pipe, X, y, scoring=("accuracy", "f1", "roc_auc"), n_folds: int = 
     out = {s: res[f"test_{s}"] for s in scoring}
     out.update({f"train_{s}": res[f"train_{s}"] for s in scoring})
     out["fit_time"] = res["fit_time"]
+    out["score_time"] = res["score_time"]
     return out
 
 

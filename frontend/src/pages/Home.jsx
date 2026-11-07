@@ -8,7 +8,7 @@ const INTROS = {
   compare: "All models on the same cross-validation folds and metrics, next to a baseline that always predicts the majority class.",
   metrics: "Measuring a classifier: the confusion matrix, ROC and precision–recall curves, choosing a threshold, and whether the probabilities can be trusted.",
   handson: "Notebook 10_7_classification_hands_on.ipynb, run live. The default settings reproduce the notebook's numbers.",
-  workflow: "Everything above chained into one project, the way an analyst would typically run it: frame, compare, shortlist, tune, choose, test once, report.",
+  workflow: "Everything above chained into one project, the way an analyst would typically run it: frame, compare, shortlist, tune, choose, test once, report. Then the same with scikit-learn's automated tools.",
   extras: "Steps a real project adds after the notebook: fixing the hidden missing values, tuning, diagnosing over- and underfitting, and explaining the model.",
 };
 

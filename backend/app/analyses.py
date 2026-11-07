@@ -437,6 +437,31 @@ def gradient_boosting(df: pd.DataFrame, learning_rate: float = 0.05, max_depth: 
 
 
 # 10.5 Model comparison -----------------------------------------------------------
+# The course's summary table (10.5). "Ensemble (XGBoost)" is gradient boosting here: scikit-learn's version.
+CHEAT_SHEET = {
+    "logistic": ("Linear boundary + probability", "No", "Fast", "High", "Baseline models, probability outputs"),
+    "svm": ("Maximum-margin boundary", "Yes (kernels)", "Medium", "Medium", "Text, high-dimensional data"),
+    "knn": ("Neighbours vote", "Yes", "Slow (large data)", "High", "Small datasets, pattern matching"),
+    "naive_bayes": ("Probability rules", "Limited", "Very fast", "Medium", "Text classification"),
+    "tree": ("If-else rules", "Yes", "Fast", "Very high", "Rule-based decisions"),
+    "forest": ("Many trees voting", "Yes", "Medium", "Medium", "Strong tabular baseline"),
+    "boosting": ("Combine many models (boosting)", "Yes", "Slow", "Low", "High-accuracy systems"),
+}
+
+
+def cheat_sheet(measured: pd.DataFrame, metric: str) -> pd.DataFrame:
+    """The course's model summary, with what each model actually did on this dataset next to it."""
+    rows = {}
+    for key, (idea, nonlinear, speed, interpret, use) in CHEAT_SHEET.items():
+        r = measured.loc[MODEL_NAMES[key]]
+        rows[MODEL_NAMES[key]] = {
+            "core idea": idea, "non-linear data": nonlinear, "speed": speed, "interpretability": interpret,
+            "best used for": use, f"here: CV {metric}": round(r[metric], 3),
+            "here: fit (ms)": round(r["fit time (ms)"], 1), "here: predict + score (ms)": round(r["predict time (ms)"], 1),
+        }
+    return pd.DataFrame(rows).T
+
+
 def model_comparison(df: pd.DataFrame, metric: str = "roc_auc", scaling: str = "auto",
                      x: str = "Glucose", y: str = "BMI") -> dict:
     """Every model, same folds, same metrics; plus a baseline that always predicts the majority class."""
@@ -452,7 +477,8 @@ def model_comparison(df: pd.DataFrame, metric: str = "roc_auc", scaling: str = "
             r = cv_scores(pipe, X, yy, scoring=scoring)
         rows.append({"model": label, **{m: r[m].mean() for m in scoring}, "std": r[metric].std(),
                      "train": r[f"train_{metric}"].mean(), "validation": r[metric].mean(),
-                     "fit time (ms)": r["fit_time"].mean() * 1000})
+                     "fit time (ms)": r["fit_time"].mean() * 1000,
+                     "predict time (ms)": r["score_time"].mean() * 1000})
         per_fold += [{"model": label, "score": v} for v in r[metric]]
         if name != "dummy":
             fitted[label] = make_pipeline(name, scale=scale).fit(X2, y2)
@@ -474,7 +500,9 @@ def model_comparison(df: pd.DataFrame, metric: str = "roc_auc", scaling: str = "
                           "Train vs validation"),
             charts.to_png(charts.boundary_grid(fitted, X2, y2), f"Decision boundaries on {x} and {y}"),
         ],
-        "tables": [_table("Cross-validated scores (mean of 5 folds)",
+        "tables": [{**_table("Model cheat sheet: the course's summary (left) and what each model did on this "
+                             "dataset (right, 5-fold CV)", cheat_sheet(table, metric), "model"), "top": True},
+                   _table("Cross-validated scores (mean of 5 folds)",
                           table.drop(columns=["train", "validation"]).round(4), "model")],
     }
 

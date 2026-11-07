@@ -139,6 +139,8 @@ def build_pdf(topic: Topic, result: dict, params: dict | None = None) -> bytes:
     mt.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc"))]))
     story += [mt, Spacer(1, 8)]
 
+    for t in [t for t in result["tables"] if t.get("top")]:
+        story += _table(t, doc.width)
     if result.get("chart") and result["chart"]["labels"]:
         story += [_image(_chart_png(result["chart"]), doc.width * 0.9), Spacer(1, 6)]
     for im in result.get("images", []):
@@ -146,7 +148,7 @@ def build_pdf(topic: Topic, result: dict, params: dict | None = None) -> bytes:
         story += [Paragraph(f"<b>{_esc(im['title'])}</b>", title),
                   _image(io.BytesIO(base64.b64decode(im["png"])), doc.width), Spacer(1, 8)]
 
-    for t in result["tables"]:
+    for t in [t for t in result["tables"] if not t.get("top")]:
         story += _table(t, doc.width)
 
     step_title = ParagraphStyle("st", parent=H2, fontSize=11.5, keepWithNext=True)

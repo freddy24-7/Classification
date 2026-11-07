@@ -177,9 +177,10 @@ export default function TopicPage() {
         {r.flagged?.length > 0 && (
           <p>Flagged columns: {r.flagged.map((f) => <code className="flag" key={f}>{f}</code>)}</p>
         )}
+        {r.tables.filter((t) => t.top).map((t) => <DataTable key={t.title} table={t} />)}
         <BarChart chart={r.chart} />
         {r.images?.map((im) => <Plot key={im.title} im={im} />)}
-        {r.tables.map((t) => <DataTable key={t.title} table={t} />)}
+        {r.tables.filter((t) => !t.top).map((t) => <DataTable key={t.title} table={t} />)}
       </section>
 
       {r.steps && <div className={state.loading ? "stale" : ""}><Steps steps={r.steps} /></div>}

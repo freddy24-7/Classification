@@ -8,8 +8,11 @@ Classification models and how to evaluate them: course sections 10.2–10.7, an 
 | 10.2–10.4 Model intuition | logistic regression, KNN (10.2); decision tree, naive Bayes (10.3); SVM, random forest, gradient boosting (10.4) |
 | 10.5 Comparison | all models and a baseline on the same CV folds, train vs validation, decision boundaries side by side |
 | 10.6 Evaluation metrics | confusion matrix and metrics, ROC/AUC, precision–recall, threshold choice, calibration |
+| 10.5 cheat sheet | the course's model summary table, at the top of the 10.5 comparison page, with measured score, fit and predict time per model on this dataset |
+| 10.6 metrics guide | accuracy, confusion matrix, precision, recall, F1 and ROC AUC worked out on this dataset for all seven models, with a suitability verdict per model (`backend/app/metrics_guide.py`) |
 | 10.7 Hands-on | notebook `10_7_classification_hands_on.ipynb`, live; the defaults reproduce its numbers |
 | Analyst walkthrough | one credible end-to-end project in 11 steps (`backend/app/walkthrough.py`): frame, lock a test set, baseline, spot-check, shortlist, tune, choose (1-SE rule), threshold, test once with bootstrap intervals, sanity checks, report. First run per setting takes ~10 s, then it is cached |
+| Automated selection | `backend/app/auto_select.py`: one `GridSearchCV` over all model families plus `TunedThresholdClassifierCV`, compared with the walkthrough on the same split |
 | Beyond the course | zeros as missing values, hyperparameter tuning, learning/validation curves, feature importance |
 
 Which models belong to which part of 10.2–10.4 is a guess from the video titles; adjust `number=` in `registry.py` when you know.

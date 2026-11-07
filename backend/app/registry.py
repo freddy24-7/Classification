@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from . import analyses as a
+from . import auto_select as auto
+from . import metrics_guide as mg
 from . import charts
 from . import models as m
 from . import walkthrough as w
@@ -294,7 +296,8 @@ TOPICS: list[Topic] = [
         summary="Seven models and a baseline on the same folds, with fold-to-fold spread.",
         what="All seven models are scored with the same 5-fold stratified cross-validation on five metrics, next to a "
         "baseline that always predicts 'not diabetic'. The page also shows train against validation scores "
-        "(overfitting) and every model's decision boundary on the same two features.",
+        "(overfitting) and every model's decision boundary on the same two features. It opens with the course's "
+        "model cheat sheet, with each model's measured score and speed on this dataset next to it.",
         why="A fair comparison needs the same data splits, the same metric, a baseline, and a sense of the noise. "
         "With 768 rows, fold scores vary by a few points, so a 1% difference between models is usually not real. "
         "The boundary grid shows what each model can and cannot learn: lines, rectangles, smooth curves or blobs.",
@@ -303,6 +306,7 @@ TOPICS: list[Topic] = [
             "Scaling sits inside each pipeline, so it is fitted on training folds only.",
             "'auto' scaling scales only the models that need it (logistic, KNN, SVM).",
             "Pick the metric that matches the problem; the table sorts by it.",
+            "The cheat sheet's 'Ensemble (XGBoost)' row is gradient boosting here, scikit-learn's version.",
         ],
         fix_title="How to choose",
         fix=[
@@ -313,11 +317,50 @@ TOPICS: list[Topic] = [
         pitfalls=[
             "Comparing on a single train/test split can reverse the ranking by chance.",
             "Tuning one model and not the others makes the comparison unfair.",
+            "The cheat sheet is a rule of thumb. KNN is slow at prediction, not at fitting, and its 'high' "
+            "interpretability means 'look at the neighbours', not a formula. Logistic regression can fit curves if "
+            "you add features such as squares or interactions.",
         ],
         params=[select("metric", "Rank by", ["roc_auc", "accuracy", "f1", "recall", "precision"], "roc_auc"),
                 select("scaling", "Scaling", ["auto", "always", "never"], "auto")] + BOUNDARY,
     ),
     # 10.6 ------------------------------------------------------------------
+    Topic(
+        id="metrics_guide", number="10.6", group="metrics", title="The metrics on this dataset, and which model fits",
+        func=mg.metrics_guide, helpers=[mg.metric_concepts, charts.confusion_grid],
+        summary="Accuracy, confusion matrix, precision, recall, F1 and ROC AUC for all seven models, and a verdict.",
+        what="One page that goes through the six evaluation tools of 10.6 on the diabetes data. A table works out each "
+        "metric with the chosen model's actual counts, names the trap it hides on this dataset and gives a verdict "
+        "for diabetes screening. Charts show the same predictions scored five ways against the always-'no' baseline, "
+        "every model on every metric, all seven confusion matrices and the ROC curves. A last table judges how "
+        "suitable each model is, from the numbers and from what the numbers do not show.",
+        why="Each metric answers a different question, and on imbalanced data they disagree: the model that looks "
+        "best on accuracy is not the one that catches the most diabetics. Choosing the metric is choosing what "
+        "'good' means for the problem, so it comes before choosing the model.",
+        how=[
+            "Predictions are out-of-fold over all 768 patients (5-fold CV), so every patient is predicted by a model "
+            "that never saw them. 268 diabetics give steadier numbers than the 54 in the test split.",
+            "Accuracy, precision, recall and F1 depend on the threshold; change it in the settings and watch them move.",
+            "ROC AUC and 'precision at 80% recall' do not depend on the threshold.",
+            "Brier score measures how trustworthy the probabilities are (lower is better).",
+            "Verdict: 'strong candidate' within 0.01 ROC AUC of the best, 'usable' within 0.03.",
+        ],
+        fix_title="Which metric to use here",
+        fix=[
+            "Compare models on ROC AUC (or precision at a fixed recall).",
+            "Choose the threshold for recall: in screening, a missed diabetic is the costly error.",
+            "Report precision next to it, so the cost in false alarms is visible.",
+            "Show the confusion matrix in patients, and never report accuracy alone.",
+        ],
+        pitfalls=[
+            "The 0.5 threshold is a default: at 0.5 every model misses a large share of the diabetics.",
+            "Out-of-fold numbers here differ slightly from the test-split numbers on the other pages; both are honest, "
+            "on different patients.",
+            "Precision–recall AUC (see the precision–recall page) is often more informative than ROC AUC when the "
+            "positive class is rare; at 35% diabetics here, both work.",
+        ],
+        params=[MODEL, select("threshold", "Decision threshold", [0.2, 0.3, 0.4, 0.5, 0.6, 0.7], 0.5)],
+    ),
     Topic(
         id="confusion", number="10.6", group="metrics", title="Confusion matrix and its metrics",
         func=a.confusion_and_metrics, helpers=[m.threshold_metrics],
@@ -510,6 +553,48 @@ TOPICS: list[Topic] = [
                 select("zeros", "Impossible zeros", ["median", "keep"], "median"),
                 select("selection", "Model selection rule", ["simplest_within_1se", "best_mean"],
                        "simplest_within_1se"),
+                select("seed", "Train/test split seed", [42, 0, 7, 123], 42)],
+    ),
+    Topic(
+        id="auto_select", number="W.2", group="workflow", title="Automated model selection with scikit-learn",
+        func=auto.automated_selection, helpers=[auto.search_space, auto.precision_at_recall],
+        summary="One GridSearchCV over every model family, then TunedThresholdClassifierCV; compared with W.1.",
+        what="scikit-learn can automate the mechanical part of the walkthrough. GridSearchCV accepts the model itself "
+        "as a search parameter, so one search compares all seven model families and their settings on the same "
+        "folds. TunedThresholdClassifierCV (scikit-learn 1.5 and later) then chooses the decision threshold by "
+        "cross-validation for an objective you give it. The result is put next to the analyst walkthrough on the "
+        "same split.",
+        why="These tools replace loops you would otherwise write by hand, and they make the comparison fair: every "
+        "candidate sees the same folds and the same preprocessing. What they do not do is judgement. The search "
+        "always takes the highest mean score, even when the lead is far inside the noise, and the threshold "
+        "objective still has to come from the problem.",
+        how=[
+            "Pipeline: [median imputer] → StandardScaler → model; scaling does not change tree-based models.",
+            "param_grid is a list of dicts, one per family: {'model': [LogisticRegression()], 'model__C': [...]}.",
+            "GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc').fit(X_train, y_train).",
+            "TunedThresholdClassifierCV(search.best_estimator_, scoring=..., cv=5) tries 100 thresholds per fold.",
+            "Recall target: a custom scorer gives the precision when recall reaches the target, and a penalty if not.",
+            "The test set is used once, at the end, exactly as in the walkthrough.",
+        ],
+        fix_title="Other tools that do this",
+        fix=[
+            "RandomizedSearchCV or HalvingGridSearchCV when the grid gets large.",
+            "LazyPredict: a one-line table of about 30 models with defaults (no cross-validation).",
+            "PyCaret compare_models(): a cross-validated leaderboard, then tune_model() and finalize_model().",
+            "FLAML, AutoGluon, TPOT, H2O AutoML: full AutoML with time budgets and ensembles.",
+            "Optuna: smarter tuning of one model's settings.",
+        ],
+        pitfalls=[
+            "The winner's CV score is optimistic: it is the maximum over 24 candidates. Nested CV or the untouched "
+            "test set gives the honest number.",
+            "A leaderboard order inside one standard error is noise; change the seed and the winner can change.",
+            "With balanced accuracy or F1 the tuned threshold can land far from what screening needs.",
+            "The first run of each setting takes about 15 seconds (it also runs the walkthrough for the comparison).",
+        ],
+        params=[select("objective", "Threshold objective", ["recall_target", "f1", "balanced_accuracy"],
+                       "recall_target"),
+                select("recall_target", "Recall target", [0.7, 0.75, 0.8, 0.85, 0.9], 0.8),
+                select("zeros", "Impossible zeros", ["median", "keep"], "median"),
                 select("seed", "Train/test split seed", [42, 0, 7, 123], 42)],
     ),
     # Beyond the course -----------------------------------------------------

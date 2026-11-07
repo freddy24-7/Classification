@@ -171,3 +171,4 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .step-head h3 { margin: 0; font-size: 1.1rem; }
 .step-num { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--card); display: grid; place-items: center; font-weight: 700; }
 .decision { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
+td.text { white-space: normal; min-width: 180px; max-width: 300px; }
